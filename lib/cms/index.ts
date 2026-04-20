@@ -31,6 +31,11 @@ function getSpaceId(): string {
   return raw;
 }
 
+/** Returns the Contentful environment (e.g. "master", "staging"). */
+function getEnvironmentId(): string {
+  return process.env.CONTENTFUL_ENV ?? "master";
+}
+
 function getToken(usePreview: boolean): string {
   if (usePreview) {
     const token = process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN;
@@ -57,6 +62,7 @@ async function fetchContent<T = Record<string, unknown>>(
 ): Promise<T> {
   const usePreview = shouldUsePreviewApi(draft);
   const spaceId = getSpaceId();
+  const environmentId = getEnvironmentId();
   const token = getToken(usePreview);
 
   if (!spaceId || !token) {
@@ -64,7 +70,7 @@ async function fetchContent<T = Record<string, unknown>>(
   }
 
   const response = await fetch(
-    `https://graphql.contentful.com/content/v1/spaces/${spaceId}`,
+    `https://graphql.contentful.com/content/v1/spaces/${spaceId}/environments/${environmentId}`,
     {
       method: "POST",
       headers: {
