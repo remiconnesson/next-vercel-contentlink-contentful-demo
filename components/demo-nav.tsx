@@ -1,15 +1,13 @@
-import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
+import Link from "next/link";
 
 const links = [
   { href: "/", label: "Overview" },
-  { href: "/time-based", label: "Time-based" },
-  { href: "/on-demand/post-1", label: "On-demand (pre-built)" },
-  { href: "/on-demand/post-2", label: "On-demand (dynamic)" },
-]
+  { href: "/hello-world", label: "Hello World" },
+  { href: "/about", label: "About" },
+];
 
 interface DemoNavProps {
-  currentPath?: string
+  currentPath?: string;
 }
 
 export function DemoNav({ currentPath }: DemoNavProps) {
@@ -18,15 +16,15 @@ export function DemoNav({ currentPath }: DemoNavProps) {
       <div className="mx-auto flex max-w-4xl items-center gap-4 px-6 py-3">
         <Link href="/" className="flex items-center gap-2">
           <div className="flex size-7 items-center justify-center rounded-md bg-foreground">
-            <span className="text-xs font-bold text-background">ISR</span>
+            <span className="text-xs font-bold text-background">CL</span>
           </div>
           <span className="hidden font-semibold sm:inline">
-            Next.js ISR Demo
+            Content Link Demo
           </span>
         </Link>
         <nav className="ml-auto flex items-center gap-1">
           {links.map((link) => {
-            const isActive = currentPath === link.href
+            const isActive = currentPath === link.href;
             return (
               <Link
                 key={link.href}
@@ -37,17 +35,12 @@ export function DemoNav({ currentPath }: DemoNavProps) {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 }`}
               >
-                <span className="hidden md:inline">{link.label}</span>
-                <span className="md:hidden">
-                  {link.label === "Overview"
-                    ? "Home"
-                    : link.label.split(" ")[0]}
-                </span>
+                {link.label}
               </Link>
-            )
+            );
           })}
         </nav>
       </div>
     </header>
-  )
+  );
 }
