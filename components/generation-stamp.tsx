@@ -49,8 +49,13 @@ function randomName() {
  * Shows the page generation timestamp, a random number, and a random
  * name. All three values are computed at server render time, so they
  * only change when the page is regenerated (proving ISR / revalidation).
+ *
+ * The "use cache" directive makes this a Cache Component -- Next.js
+ * captures `new Date()` and `Math.random()` at cache time and freezes
+ * them until the cache entry is revalidated.
  */
-export function GenerationStamp() {
+export async function GenerationStamp() {
+  "use cache";
   const now = new Date();
   const time = now.toLocaleString("en-US", {
     timeZone: "UTC",
