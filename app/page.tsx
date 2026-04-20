@@ -14,6 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowRight, Pencil, Eye, RefreshCw } from "lucide-react";
+import { GenerationStamp } from "@/components/generation-stamp";
 import { getPages } from "@/lib/cms";
 
 async function getCachedPages() {
@@ -225,8 +226,11 @@ if (draft && json.extensions) {
           )}
         </section>
 
+        {/* Generation stamp for ISR demo */}
+        <GenerationStamp />
+
         {/* Footer */}
-        <Separator className="mb-6" />
+        <Separator className="my-6" />
         <footer className="flex flex-col gap-2 pb-12 text-sm text-muted-foreground">
           <p>
             Built with Next.js 16, Contentful, and Vercel Content Link.
