@@ -291,9 +291,12 @@ if (draft && json.extensions) {
   if (page) {
     cacheTag(\`page:id:\${page.id}\`);
   }
-  return page ?? null;
+  // Stamp data is generated inside the cache boundary
+  // so it shares the same tags and revalidates together.
+  const stamp = generateStampData();
+  return { page: page ?? null, stamp };
 }`}
-            highlight={[3, 4, 8]}
+            highlight={[3, 4, 8, 13]}
           />
 
           <h3 className="text-lg font-semibold text-foreground pt-2">
