@@ -12,8 +12,6 @@ interface ContentfulResponse<T> {
 }
 
 // ─── Environment helpers ────────────────────────────────────────────
-// CONTENTFUL_SPACE_ID may accidentally contain a CMA token (CFPAT-…).
-// Detect that and fall back to the known space ID when it happens.
 
 /**
  * Returns true when running on a Vercel preview deployment or when
@@ -28,22 +26,33 @@ function shouldUsePreviewApi(draft: boolean): boolean {
 }
 
 function getSpaceId(): string {
-  const raw = process.env.CONTENTFUL_SPACE_ID ?? "";
-  if (raw && !raw.startsWith("CFPAT-")) return raw;
-  // Fallback: space id discovered from the CMA /spaces endpoint
-  return "xked43r46smn";
+  const raw = process.env.CONTENTFUL_SPACE_ID;
+  if (!raw) throw new Error("Missing CONTENTFUL_SPACE_ID env var");
+  return raw;
+}
+
+/** Returns the Contentful environment (e.g. "master", "staging"). */
+function getEnvironmentId(): string {
+  return process.env.CONTENTFUL_ENV ?? "master";
 }
 
 function getToken(usePreview: boolean): string {
   if (usePreview) {
-    return process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "";
+    const token = process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN;
+    if (!token)
+      throw new Error("Missing CONTENTFUL_PREVIEW_ACCESS_TOKEN env var");
+    return token;
   }
-  const raw = process.env.CONTENTFUL_ACCESS_TOKEN ?? "";
-  // If the CDA token is actually a CMA token, use the known CDA key
-  if (raw.startsWith("CFPAT-")) {
-    return "9Vs0QOtvV1Yl0hJtlyUCtwZ7N7FoIxKJhtmwfIaR-Ao";
+  const token = process.env.CONTENTFUL_ACCESS_TOKEN;
+  if (!token) throw new Error("Missing CONTENTFUL_ACCESS_TOKEN env var");
+  if (token.startsWith("CFPAT-")) {
+    throw new Error(
+      "CONTENTFUL_ACCESS_TOKEN is set to a CMA (management) token. " +
+        "It must be a CDA (Content Delivery API) token instead. " +
+        "Find it in Contentful under Settings > API keys.",
+    );
   }
-  return raw;
+  return token;
 }
 
 async function fetchContent<T = Record<string, unknown>>(
@@ -53,6 +62,7 @@ async function fetchContent<T = Record<string, unknown>>(
 ): Promise<T> {
   const usePreview = shouldUsePreviewApi(draft);
   const spaceId = getSpaceId();
+  const environmentId = getEnvironmentId();
   const token = getToken(usePreview);
 
   if (!spaceId || !token) {
@@ -60,7 +70,7 @@ async function fetchContent<T = Record<string, unknown>>(
   }
 
   const response = await fetch(
-    `https://graphql.contentful.com/content/v1/spaces/${spaceId}`,
+    `https://graphql.contentful.com/content/v1/spaces/${spaceId}/environments/${environmentId}`,
     {
       method: "POST",
       headers: {
@@ -106,7 +116,7 @@ async function fetchContent<T = Record<string, unknown>>(
 
 const GET_PAGES_QUERY = `
   query GetPages($preview: Boolean) @contentSourceMaps {
-    pageCollection(preview: $preview, order: [title_ASC]) {
+    clDemoPageCollection(preview: $preview, order: [title_ASC]) {
       items {
         sys { id }
         title
@@ -119,7 +129,7 @@ const GET_PAGES_QUERY = `
 
 const GET_PAGE_BY_SLUG_QUERY = `
   query GetPageBySlug($slug: String!, $preview: Boolean) @contentSourceMaps {
-    pageCollection(where: { slug: $slug }, limit: 1, preview: $preview) {
+    clDemoPageCollection(where: { slug: $slug }, limit: 1, preview: $preview) {
       items {
         sys { id }
         title
@@ -148,10 +158,10 @@ function reshapeToPage(item: Record<string, unknown>): Page {
 
 export async function getPages(draft = false): Promise<Page[]> {
   const res = await fetchContent<{
-    pageCollection: { items: Record<string, unknown>[] };
+    clDemoPageCollection: { items: Record<string, unknown>[] };
   }>(GET_PAGES_QUERY, {}, draft);
 
-  return res?.pageCollection?.items?.map(reshapeToPage) ?? [];
+  return res?.clDemoPageCollection?.items?.map(reshapeToPage) ?? [];
 }
 
 export async function getPageBySlug(
@@ -161,9 +171,9 @@ export async function getPageBySlug(
   // Ensure the slug sent to Contentful is free of stega encoding
   const cleanSlug = vercelStegaClean(slug);
   const res = await fetchContent<{
-    pageCollection: { items: Record<string, unknown>[] };
+    clDemoPageCollection: { items: Record<string, unknown>[] };
   }>(GET_PAGE_BY_SLUG_QUERY, { slug: cleanSlug }, draft);
 
-  const item = res?.pageCollection?.items?.[0];
+  const item = res?.clDemoPageCollection?.items?.[0];
   return item ? reshapeToPage(item) : undefined;
 }
