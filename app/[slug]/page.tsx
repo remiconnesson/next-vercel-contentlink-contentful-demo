@@ -8,7 +8,11 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { GenerationStamp } from "@/components/generation-stamp";
+import {
+  GenerationStamp,
+  generateStampData,
+  type StampData,
+} from "@/components/generation-stamp";
 
 // Pre-render all known slugs at build time
 export async function generateStaticParams() {
@@ -16,7 +20,9 @@ export async function generateStaticParams() {
   return pages.map((p) => ({ slug: p.slug }));
 }
 
-async function getCachedPage(slug: string) {
+async function getCachedPage(
+  slug: string,
+): Promise<{ page: Awaited<ReturnType<typeof getPageBySlug>> | null; stamp: StampData }> {
   "use cache";
   cacheLife("max");
   // Tag by slug so generateMetadata can also hit the same cache entry.
@@ -29,7 +35,10 @@ async function getCachedPage(slug: string) {
   if (page) {
     cacheTag(`page:id:${page.id}`);
   }
-  return page ?? null;
+  // Generate stamp data inside the cache boundary so it shares the
+  // same cache tags and is revalidated together with the page content.
+  const stamp = generateStampData();
+  return { page: page ?? null, stamp };
 }
 
 export async function generateMetadata({
@@ -38,7 +47,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const page = await getCachedPage(slug);
+  const { page } = await getCachedPage(slug);
   if (!page) return {};
   return { title: page.title, description: `${page.title} — Content Link Demo` };
 }
@@ -51,9 +60,17 @@ export default async function SlugPage({
   const { slug } = await params;
   const { isEnabled: draft } = await draftMode();
 
-  const page = draft
-    ? await getPageBySlug(slug, true)
-    : await getCachedPage(slug);
+  let page: Awaited<ReturnType<typeof getPageBySlug>> | null | undefined;
+  let stamp: StampData;
+
+  if (draft) {
+    page = await getPageBySlug(slug, true);
+    stamp = generateStampData();
+  } else {
+    const cached = await getCachedPage(slug);
+    page = cached.page;
+    stamp = cached.stamp;
+  }
 
   if (!page) notFound();
 
@@ -87,7 +104,7 @@ export default async function SlugPage({
           <ContentRenderer content={page.body} />
         </article>
 
-        <GenerationStamp />
+        <GenerationStamp data={stamp} />
 
         <Separator className="my-6" />
         <footer className="pb-12 text-sm text-muted-foreground">

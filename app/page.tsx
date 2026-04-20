@@ -14,21 +14,40 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ArrowRight, Pencil, Eye, RefreshCw } from "lucide-react";
-import { GenerationStamp } from "@/components/generation-stamp";
+import {
+  GenerationStamp,
+  generateStampData,
+  type StampData,
+} from "@/components/generation-stamp";
 import { getPages } from "@/lib/cms";
 
-async function getCachedPages() {
+async function getCachedPages(): Promise<{
+  pages: Awaited<ReturnType<typeof getPages>>;
+  stamp: StampData;
+}> {
   "use cache";
   cacheLife("max");
   cacheTag("page:list");
 
   const pages = await getPages();
-  return pages;
+  const stamp = generateStampData();
+  return { pages, stamp };
 }
 
 export default async function HomePage() {
   const { isEnabled: draft } = await draftMode();
-  const pages = draft ? await getPages(true) : await getCachedPages();
+
+  let pages: Awaited<ReturnType<typeof getPages>>;
+  let stamp: StampData;
+
+  if (draft) {
+    pages = await getPages(true);
+    stamp = generateStampData();
+  } else {
+    const cached = await getCachedPages();
+    pages = cached.pages;
+    stamp = cached.stamp;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -226,8 +245,158 @@ if (draft && json.extensions) {
           )}
         </section>
 
-        {/* Generation stamp for ISR demo */}
-        <GenerationStamp />
+        {/* ISR + On-Demand Revalidation Demo */}
+        <section className="flex flex-col gap-6 pb-12">
+          <h2 className="text-2xl font-semibold text-foreground">
+            ISR + On-Demand Revalidation
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            Each page is cached independently with its own{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              cacheTag
+            </code>
+            . When Contentful fires a webhook, only the changed page is
+            revalidated -- the others keep serving from cache. The
+            generation stamp below proves it: edit a page in Contentful,
+            and only that page&apos;s stamp changes.
+          </p>
+
+          <GenerationStamp data={stamp} />
+
+          <Callout type="info" title="How to verify">
+            <p>
+              Open two page tabs side by side (e.g. <code>/hello-world</code>{" "}
+              and <code>/about</code>). Edit one entry in Contentful and
+              publish. Refresh both tabs -- only the edited page&apos;s
+              generation stamp will change.
+            </p>
+          </Callout>
+
+          <h3 className="text-lg font-semibold text-foreground pt-2">
+            Cache Tag Strategy
+          </h3>
+          <p className="text-muted-foreground leading-relaxed">
+            Each page registers two tags: one by slug (for the Next.js cache
+            key) and one by Contentful entry ID (for the webhook). The
+            landing page uses a separate <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">page:list</code> tag.
+          </p>
+          <CodeBlock
+            filename="app/[slug]/page.tsx"
+            code={`async function getCachedPage(slug: string) {
+  "use cache";
+  cacheLife("max");
+  cacheTag(\`page:slug:\${slug}\`);
+
+  const page = await getPageBySlug(slug);
+  if (page) {
+    cacheTag(\`page:id:\${page.id}\`);
+  }
+  return page ?? null;
+}`}
+            highlight={[3, 4, 8]}
+          />
+
+          <h3 className="text-lg font-semibold text-foreground pt-2">
+            Webhook Handler
+          </h3>
+          <p className="text-muted-foreground leading-relaxed">
+            The webhook at{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              /api/revalidate
+            </code>{" "}
+            reads the entry ID from the Contentful payload and revalidates
+            only the matching cache tag.
+          </p>
+          <CodeBlock
+            filename="app/api/revalidate/route.ts"
+            code={`// On publish: revalidate only the changed page
+tags.push(\`page:id:\${entryId}\`);
+
+// On unpublish/delete: also revalidate the list
+if (isRemoval) {
+  tags.push("page:list");
+}
+
+for (const tag of tags) {
+  revalidateTag(tag, "max");
+}`}
+            highlight={[2, 6]}
+          />
+
+          <h3 className="text-lg font-semibold text-foreground pt-2">
+            Contentful Webhook Setup
+          </h3>
+          <p className="text-muted-foreground leading-relaxed">
+            To enable on-demand revalidation, create a webhook in Contentful
+            that fires on entry publish / unpublish events.
+          </p>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">
+              Step-by-step
+            </p>
+            <ol className="flex flex-col gap-2 text-sm text-muted-foreground list-decimal pl-5 leading-relaxed">
+              <li>
+                In Contentful, go to{" "}
+                <strong className="text-foreground">
+                  Settings &rarr; Webhooks &rarr; Add Webhook
+                </strong>
+              </li>
+              <li>
+                Set the URL to your deployed site:{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  https://your-site.vercel.app/api/revalidate
+                </code>
+              </li>
+              <li>
+                Set method to <strong className="text-foreground">POST</strong>
+              </li>
+              <li>
+                Add a custom header:{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  x-contentful-webhook-secret
+                </code>{" "}
+                with the value of your{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  CONTENTFUL_REVALIDATE_SECRET
+                </code>{" "}
+                env var
+              </li>
+              <li>
+                Under <strong className="text-foreground">Triggers</strong>,
+                select <strong className="text-foreground">Entry</strong> events:{" "}
+                Publish, Unpublish
+              </li>
+              <li>
+                Under <strong className="text-foreground">Content type</strong>,
+                select only{" "}
+                <strong className="text-foreground">Page</strong>
+              </li>
+              <li>
+                Under <strong className="text-foreground">Payload</strong>,
+                use the default (entire entry). The handler only reads{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  sys.id
+                </code>{" "}
+                and{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  sys.contentType.sys.id
+                </code>
+              </li>
+              <li>Save and test by publishing an entry</li>
+            </ol>
+          </div>
+
+          <Callout type="tip" title="Environment variable">
+            <p>
+              Make sure{" "}
+              <code>CONTENTFUL_REVALIDATE_SECRET</code>{" "}
+              is set in your Vercel project&apos;s environment variables. It can
+              be any random string -- just make sure it matches the webhook
+              header value.
+            </p>
+          </Callout>
+        </section>
 
         {/* Footer */}
         <Separator className="my-6" />
