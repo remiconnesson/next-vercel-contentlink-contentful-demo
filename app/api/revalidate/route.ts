@@ -28,7 +28,11 @@ export async function POST(request: Request) {
 
   switch (contentType) {
     case "page":
-      tags.push(`page:${entryId}`, "page:list");
+      // Always revalidate the individual page by its entry ID
+      tags.push(`page:id:${entryId}`);
+      // Always revalidate the list page too -- it displays titles and
+      // slugs that may have changed on any publish, not just removals.
+      tags.push("page:list");
       break;
     default:
       return new Response(`Unknown type: ${contentType}`, { status: 400 });

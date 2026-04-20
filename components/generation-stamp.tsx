@@ -39,23 +39,17 @@ const NOUNS = [
   "Crane",
 ];
 
-function randomName() {
-  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
-  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  return `${adj} ${noun}`;
+export interface StampData {
+  time: string;
+  randomNumber: number;
+  name: string;
 }
 
 /**
- * Shows the page generation timestamp, a random number, and a random
- * name. All three values are computed at server render time, so they
- * only change when the page is regenerated (proving ISR / revalidation).
- *
- * The "use cache" directive makes this a Cache Component -- Next.js
- * captures `new Date()` and `Math.random()` at cache time and freezes
- * them until the cache entry is revalidated.
+ * Generate stamp data inside a "use cache" boundary so the values are
+ * frozen alongside the page content and share the same cache tags.
  */
-export async function GenerationStamp() {
-  "use cache";
+export function generateStampData(): StampData {
   const now = new Date();
   const time = now.toLocaleString("en-US", {
     timeZone: "UTC",
@@ -68,8 +62,19 @@ export async function GenerationStamp() {
     hour12: false,
   });
   const randomNumber = Math.floor(Math.random() * 10000);
-  const name = randomName();
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
 
+  return { time, randomNumber, name: `${adj} ${noun}` };
+}
+
+/**
+ * Renders pre-computed stamp data. Call `generateStampData()` inside your
+ * "use cache" function and pass the result as the `data` prop. That way
+ * the stamp values are tied to the same cache entry and revalidated
+ * together with the page content.
+ */
+export function GenerationStamp({ data }: { data: StampData }) {
   return (
     <Card className="border-dashed">
       <CardHeader className="pb-3">
@@ -80,13 +85,13 @@ export async function GenerationStamp() {
       <CardContent>
         <div className="flex flex-wrap gap-3">
           <Badge variant="secondary" className="font-mono text-xs">
-            {time} UTC
+            {data.time} UTC
           </Badge>
           <Badge variant="outline" className="font-mono text-xs">
-            #{String(randomNumber).padStart(4, "0")}
+            #{String(data.randomNumber).padStart(4, "0")}
           </Badge>
           <Badge variant="outline" className="text-xs">
-            {name}
+            {data.name}
           </Badge>
         </div>
         <p className="mt-3 text-xs text-muted-foreground leading-relaxed">
