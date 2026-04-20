@@ -24,25 +24,15 @@ export async function POST(request: Request) {
     return new Response("Missing contentType or entryId", { status: 400 });
   }
 
-  // Contentful webhooks include a "topic" header:
-  //   ContentManagement.Entry.publish  – content updated
-  //   ContentManagement.Entry.unpublish / delete – content removed
-  // For publish we only need to revalidate the specific entry.
-  // For unpublish/delete we also revalidate the list so it disappears.
-  const topic = request.headers.get("x-contentful-topic") ?? "";
-  const isRemoval =
-    topic.includes("unpublish") || topic.includes("delete");
-
   const tags: string[] = [];
 
   switch (contentType) {
     case "page":
       // Always revalidate the individual page by its entry ID
       tags.push(`page:id:${entryId}`);
-      // Only revalidate the list page when content is added/removed
-      if (isRemoval) {
-        tags.push("page:list");
-      }
+      // Always revalidate the list page too -- it displays titles and
+      // slugs that may have changed on any publish, not just removals.
+      tags.push("page:list");
       break;
     default:
       return new Response(`Unknown type: ${contentType}`, { status: 400 });

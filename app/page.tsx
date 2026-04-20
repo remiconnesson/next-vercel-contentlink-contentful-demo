@@ -309,13 +309,12 @@ if (draft && json.extensions) {
           </p>
           <CodeBlock
             filename="app/api/revalidate/route.ts"
-            code={`// On publish: revalidate only the changed page
+            code={`// Always revalidate the individual page
 tags.push(\`page:id:\${entryId}\`);
 
-// On unpublish/delete: also revalidate the list
-if (isRemoval) {
-  tags.push("page:list");
-}
+// Always revalidate the list page too -- it displays
+// titles and slugs that may have changed.
+tags.push("page:list");
 
 for (const tag of tags) {
   revalidateTag(tag, "max");
