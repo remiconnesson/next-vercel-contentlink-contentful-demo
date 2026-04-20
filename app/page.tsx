@@ -337,71 +337,352 @@ switch (contentType) {
 
           <div className="flex flex-col gap-3 rounded-lg border p-4">
             <p className="text-sm font-semibold text-foreground">
-              Step-by-step
+              1. URL &amp; Method
             </p>
-            <ol className="flex flex-col gap-2 text-sm text-muted-foreground list-decimal pl-5 leading-relaxed">
+            <ul className="flex flex-col gap-1 text-sm text-muted-foreground list-disc pl-5 leading-relaxed">
               <li>
-                In Contentful, go to{" "}
+                Go to{" "}
                 <strong className="text-foreground">
                   Settings &rarr; Webhooks &rarr; Add Webhook
                 </strong>
               </li>
               <li>
-                Set the URL to your deployed site:{" "}
+                URL:{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                   https://your-site.vercel.app/api/revalidate
                 </code>
               </li>
               <li>
-                Set method to <strong className="text-foreground">POST</strong>
+                Method:{" "}
+                <strong className="text-foreground">POST</strong>
               </li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">
+              2. Headers
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Two custom headers are required:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="pb-2 pr-4 text-left font-medium text-foreground">
+                      Header
+                    </th>
+                    <th className="pb-2 text-left font-medium text-foreground">
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        x-contentful-webhook-secret
+                      </code>
+                    </td>
+                    <td className="py-2">
+                      Your{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        CONTENTFUL_REVALIDATE_SECRET
+                      </code>{" "}
+                      value
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        x-vercel-protection-bypass
+                      </code>
+                    </td>
+                    <td className="py-2">
+                      Your{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        VERCEL_AUTOMATION_BYPASS_SECRET
+                      </code>{" "}
+                      value
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <Callout type="info" title="Deployment Protection">
+              <p>
+                If your Vercel project has Deployment Protection enabled,
+                webhooks will be blocked with a 401/403. The{" "}
+                <code>x-vercel-protection-bypass</code> header lets
+                Contentful bypass this. Generate the secret in your Vercel
+                project under{" "}
+                <strong>
+                  Settings &rarr; Deployment Protection &rarr; Protection
+                  Bypass for Automation
+                </strong>
+                . The value is automatically available as the{" "}
+                <code>VERCEL_AUTOMATION_BYPASS_SECRET</code> env var.
+              </p>
+            </Callout>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">
+              3. Triggers
+            </p>
+            <ul className="flex flex-col gap-1 text-sm text-muted-foreground list-disc pl-5 leading-relaxed">
               <li>
-                Add a custom header:{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  x-contentful-webhook-secret
-                </code>{" "}
-                with the value of your{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  CONTENTFUL_REVALIDATE_SECRET
-                </code>{" "}
-                env var
+                Select{" "}
+                <strong className="text-foreground">Entry</strong> events:{" "}
+                <strong className="text-foreground">
+                  Publish, Unpublish
+                </strong>
               </li>
+            </ul>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">
+              4. Filters
+            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Add two filters so the webhook only fires for the right
+              content in the right environment:
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="pb-2 pr-4 text-left font-medium text-foreground">
+                      Filter
+                    </th>
+                    <th className="pb-2 pr-4 text-left font-medium text-foreground">
+                      Operator
+                    </th>
+                    <th className="pb-2 text-left font-medium text-foreground">
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="text-muted-foreground">
+                  <tr className="border-b">
+                    <td className="py-2 pr-4">
+                      Content type ID{" "}
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                        sys.contentType.sys.id
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">equals</td>
+                    <td className="py-2">
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        cl-demo-Page
+                      </code>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-2 pr-4">
+                      Environment ID{" "}
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                        sys.environment.sys.id
+                      </code>
+                    </td>
+                    <td className="py-2 pr-4">equals</td>
+                    <td className="py-2">
+                      Your{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        CONTENTFUL_ENV
+                      </code>{" "}
+                      value (e.g.{" "}
+                      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                        staging
+                      </code>
+                      )
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <Callout type="warning" title="Match your environment">
+              <p>
+                The Environment ID filter must match the{" "}
+                <code>CONTENTFUL_ENV</code> your app reads from. If your app
+                fetches from <code>staging</code>, set the filter to{" "}
+                <code>staging</code>. If it fetches from{" "}
+                <code>master</code>, set it to <code>master</code>.
+                Mismatched values mean edits in Contentful will never trigger
+                revalidation.
+              </p>
+            </Callout>
+          </div>
+
+          <div className="flex flex-col gap-3 rounded-lg border p-4">
+            <p className="text-sm font-semibold text-foreground">
+              5. Payload
+            </p>
+            <ul className="flex flex-col gap-1 text-sm text-muted-foreground list-disc pl-5 leading-relaxed">
               <li>
-                Under <strong className="text-foreground">Triggers</strong>,
-                select <strong className="text-foreground">Entry</strong> events:{" "}
-                Publish, Unpublish
-              </li>
-              <li>
-                Under <strong className="text-foreground">Filters</strong>,
-                filter by content type ID{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  cl-demo-Page
-                </code>{" "}
-                so the webhook only fires for entries matching this content
-                model
-              </li>
-              <li>
-                Under <strong className="text-foreground">Payload</strong>,
-                use the default (entire entry). The handler reads{" "}
+                Use the default payload (entire entry). The handler only
+                reads{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                   sys.id
                 </code>{" "}
-                and matches{" "}
+                and{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  sys.contentType.sys.id === {'"cl-demo-Page"'}
+                  sys.contentType.sys.id
                 </code>
               </li>
-              <li>Save and test by publishing an entry</li>
-            </ol>
+            </ul>
+          </div>
+        </section>
+
+        <Separator className="mb-10" />
+
+        {/* Environment Variables Reference */}
+        <section className="flex flex-col gap-6 pb-12">
+          <h2 className="text-2xl font-semibold text-foreground">
+            Environment Variables
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            All the environment variables needed for this demo. Set them in
+            your Vercel project under{" "}
+            <strong className="text-foreground">
+              Settings &rarr; Environment Variables
+            </strong>
+            .
+          </p>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="pb-2 pr-4 text-left font-medium text-foreground">
+                    Variable
+                  </th>
+                  <th className="pb-2 pr-4 text-left font-medium text-foreground">
+                    Source
+                  </th>
+                  <th className="pb-2 text-left font-medium text-foreground">
+                    Notes
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="text-muted-foreground">
+                <tr className="border-b">
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_SPACE_ID
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">Contentful &rarr; Settings &rarr; General</td>
+                  <td className="py-2.5">
+                    Short alphanumeric string (e.g.{" "}
+                    <code className="font-mono text-xs">xked43r46smn</code>
+                    ). Not the management token.
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_ACCESS_TOKEN
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    Contentful &rarr; Settings &rarr; API keys
+                  </td>
+                  <td className="py-2.5">
+                    Content Delivery API (CDA) token. Must{" "}
+                    <strong className="text-foreground">not</strong> start
+                    with <code className="font-mono text-xs">CFPAT-</code>{" "}
+                    (that is a management token).
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_PREVIEW_ACCESS_TOKEN
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    Contentful &rarr; Settings &rarr; API keys
+                  </td>
+                  <td className="py-2.5">
+                    Content Preview API (CPA) token. Used for draft mode and
+                    Content Source Maps on preview deployments.
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_ENV
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">You choose</td>
+                  <td className="py-2.5">
+                    Contentful environment to query (e.g.{" "}
+                    <code className="font-mono text-xs">master</code>,{" "}
+                    <code className="font-mono text-xs">staging</code>).
+                    Defaults to{" "}
+                    <code className="font-mono text-xs">master</code>. The
+                    API key must have access to this environment.
+                  </td>
+                </tr>
+                <tr className="border-b">
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_REVALIDATE_SECRET
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">You generate</td>
+                  <td className="py-2.5">
+                    Any random string. Must match the{" "}
+                    <code className="font-mono text-xs">
+                      x-contentful-webhook-secret
+                    </code>{" "}
+                    header in your Contentful webhook.
+                  </td>
+                </tr>
+                <tr>
+                  <td className="py-2.5 pr-4">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      CONTENTFUL_MANAGEMENT_TOKEN
+                    </code>
+                  </td>
+                  <td className="py-2.5 pr-4">
+                    Contentful &rarr; Settings &rarr; CMA tokens
+                  </td>
+                  <td className="py-2.5">
+                    Only needed for scripts (setup, migrations). Starts with{" "}
+                    <code className="font-mono text-xs">CFPAT-</code>. Not
+                    used at runtime.
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
 
-          <Callout type="tip" title="Environment variable">
+          <Callout type="warning" title="Common mistake">
             <p>
-              Make sure{" "}
-              <code>CONTENTFUL_REVALIDATE_SECRET</code>{" "}
-              is set in your Vercel project&apos;s environment variables. It can
-              be any random string -- just make sure it matches the webhook
-              header value.
+              Do not confuse the CDA token with the CMA (management) token.
+              The CDA token is found under{" "}
+              <strong>Settings &rarr; API keys</strong> and does not start
+              with <code>CFPAT-</code>. If{" "}
+              <code>CONTENTFUL_ACCESS_TOKEN</code> starts with{" "}
+              <code>CFPAT-</code>, the app will throw an explicit error.
+            </p>
+          </Callout>
+
+          <Callout type="info" title="API key environment access">
+            <p>
+              Contentful API keys are scoped to specific environments. If
+              you use <code>CONTENTFUL_ENV=staging</code>, your CDA/CPA API
+              key must include <code>staging</code> in its allowed
+              environments list. Check this in{" "}
+              <strong>
+                Settings &rarr; API keys &rarr; (your key) &rarr;
+                Environments
+              </strong>
+              .
             </p>
           </Callout>
         </section>
