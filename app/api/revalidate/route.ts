@@ -1,23 +1,42 @@
-import { revalidateTag } from "next/cache"
-import { type NextRequest, NextResponse } from "next/server"
+import { revalidateTag } from "next/cache";
 
-export async function GET(request: NextRequest) {
-  const tag = request.nextUrl.searchParams.get("tag")
-
-  if (!tag) {
-    return NextResponse.json(
-      { error: "Missing 'tag' query parameter. Usage: /api/revalidate?tag=post-1" },
-      { status: 400 }
-    )
+export async function POST(request: Request) {
+  // Validate webhook secret (sent as a custom header)
+  const secret = request.headers.get("x-contentful-webhook-secret");
+  if (!secret || secret !== process.env.CONTENTFUL_REVALIDATE_SECRET) {
+    return new Response("Unauthorized", { status: 401 });
   }
 
-  // Purge all cache entries associated with this tag.
-  // The 'max' cache life profile enables stale-while-revalidate behavior.
-  revalidateTag(tag, "max")
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return new Response("Invalid body", { status: 400 });
+  }
 
-  return NextResponse.json({
-    revalidated: true,
-    tag,
-    now: Date.now(),
-  })
+  const sys = body?.sys as
+    | { contentType?: { sys?: { id?: string } }; id?: string }
+    | undefined;
+  const contentType = sys?.contentType?.sys?.id;
+  const entryId = sys?.id;
+
+  if (!contentType || !entryId) {
+    return new Response("Missing contentType or entryId", { status: 400 });
+  }
+
+  const tags: string[] = [];
+
+  switch (contentType) {
+    case "page":
+      tags.push(`page:${entryId}`, "page:list");
+      break;
+    default:
+      return new Response(`Unknown type: ${contentType}`, { status: 400 });
+  }
+
+  for (const tag of tags) {
+    revalidateTag(tag, "max");
+  }
+
+  return Response.json({ success: true, revalidated: tags });
 }

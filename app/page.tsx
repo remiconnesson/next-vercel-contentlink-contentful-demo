@@ -1,19 +1,34 @@
-import Link from "next/link"
-import { DemoNav } from "@/components/demo-nav"
-import { CodeBlock } from "@/components/code-block"
-import { Callout } from "@/components/callout"
+import Link from "next/link";
+import { cacheLife, cacheTag } from "next/cache";
+import { draftMode } from "next/headers";
+import { DemoNav } from "@/components/demo-nav";
+import { CodeBlock } from "@/components/code-block";
+import { Callout } from "@/components/callout";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { ArrowRight, Clock, Zap, RefreshCw } from "lucide-react"
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowRight, Pencil, Eye, RefreshCw } from "lucide-react";
+import { getPages } from "@/lib/cms";
 
-export default function HomePage() {
+async function getCachedPages() {
+  "use cache";
+  cacheLife("max");
+  cacheTag("page:list");
+
+  const pages = await getPages();
+  return pages;
+}
+
+export default async function HomePage() {
+  const { isEnabled: draft } = await draftMode();
+  const pages = draft ? await getPages(true) : await getCachedPages();
+
   return (
     <div className="min-h-screen bg-background">
       <DemoNav currentPath="/" />
@@ -22,46 +37,53 @@ export default function HomePage() {
         {/* Hero */}
         <div className="flex flex-col gap-4 pb-8">
           <Badge variant="secondary" className="w-fit">
-            Next.js App Router
+            Contentful + Vercel
           </Badge>
           <h1 className="text-balance text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Incremental Static Regeneration
+            Content Link Demo
           </h1>
           <p className="max-w-2xl text-lg text-muted-foreground leading-relaxed">
-            ISR lets you create or update static pages{" "}
-            <strong className="text-foreground">after</strong> you&apos;ve built
-            your site, without rebuilding the entire app. It combines the
-            performance of static generation with the flexibility of
-            server-side rendering.
+            This demo shows how{" "}
+            <strong className="text-foreground">Vercel Content Link</strong>{" "}
+            connects your deployed site to Contentful, so editors can click
+            any piece of content and jump straight to the matching field in
+            the CMS.
           </p>
         </div>
 
         <Separator className="mb-10" />
 
-        {/* What is ISR */}
+        {/* How it works */}
         <section className="flex flex-col gap-6 pb-12">
           <h2 className="text-2xl font-semibold text-foreground">
-            How does ISR work?
+            How does Content Link work?
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            When a user requests a page that has been statically generated,
-            Next.js serves the cached version instantly. In the background, it
-            checks whether the page needs to be regenerated based on the
-            revalidation strategy you chose.
+            Content Link uses{" "}
+            <strong className="text-foreground">Content Source Maps</strong>{" "}
+            -- hidden metadata encoded into your GraphQL responses -- to map
+            every rendered string back to the exact field and entry in
+            Contentful.
           </p>
 
           <div className="grid gap-4 sm:grid-cols-3">
             <Card>
               <CardHeader>
                 <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Zap className="size-5 text-primary" />
+                  <Pencil className="size-5 text-primary" />
                 </div>
-                <CardTitle className="text-base">1. Initial request</CardTitle>
+                <CardTitle className="text-base">
+                  1. Content Source Maps
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Next.js serves the pre-rendered HTML from cache. The response
-                  is instant, just like a CDN-served static file.
+                  Add{" "}
+                  <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+                    @contentSourceMaps
+                  </code>{" "}
+                  to your GraphQL queries. Contentful returns hidden metadata
+                  alongside your data.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -69,17 +91,17 @@ export default function HomePage() {
             <Card>
               <CardHeader>
                 <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
-                  <Clock className="size-5 text-primary" />
+                  <Eye className="size-5 text-primary" />
                 </div>
                 <CardTitle className="text-base">
-                  2. Background regeneration
+                  2. Vercel Toolbar
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  After the revalidation period expires, the next request
-                  triggers a background rebuild. The stale page is served while
-                  the new one generates.
+                  The Vercel Toolbar reads the encoded metadata and overlays
+                  edit buttons on every CMS-managed element on your preview
+                  deployment.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -89,12 +111,15 @@ export default function HomePage() {
                 <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
                   <RefreshCw className="size-5 text-primary" />
                 </div>
-                <CardTitle className="text-base">3. Fresh content</CardTitle>
+                <CardTitle className="text-base">
+                  3. Click to edit
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <CardDescription>
-                  Once regeneration completes, subsequent requests receive the
-                  freshly-rendered page. The old cache entry is replaced.
+                  Editors click a field on the live site and land directly in
+                  Contentful at the right entry and field. No searching, no
+                  guessing.
                 </CardDescription>
               </CardContent>
             </Card>
@@ -103,231 +128,123 @@ export default function HomePage() {
 
         <Separator className="mb-10" />
 
-        {/* Two strategies */}
+        {/* The key: @contentSourceMaps */}
         <section className="flex flex-col gap-6 pb-12">
           <h2 className="text-2xl font-semibold text-foreground">
-            Two revalidation strategies
+            The key ingredient
           </h2>
           <p className="text-muted-foreground leading-relaxed">
-            Next.js gives you two ways to tell it when a cached page should be
-            refreshed. You can use either one, or combine them.
+            The only change to your data layer is the{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              @contentSourceMaps
+            </code>{" "}
+            directive on your GraphQL query and calling{" "}
+            <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              encodeGraphQLResponse
+            </code>{" "}
+            in draft mode.
           </p>
-
-          {/* Strategy 1: Time-based */}
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-border bg-muted/30">
-              <div className="flex items-center gap-3">
-                <Badge>Strategy 1</Badge>
-                <CardTitle className="text-lg">
-                  Time-based revalidation
-                </CardTitle>
-              </div>
-              <CardDescription>
-                Automatically refresh cached data after a set time interval.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Use the{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">&quot;use cache&quot;</code>{" "}
-                  directive with{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">cacheLife()</code>{" "}
-                  to control how long the page stays cached. Next.js will serve the
-                  cached page until the timer expires, then regenerate it on the
-                  next request.
-                </p>
-                <CodeBlock
-                  filename="app/time-based/page.tsx"
-                  code={`import { cacheLife } from "next/cache"
-
-// Cached function — revalidates every 15 seconds
-async function getPageData() {
-  "use cache"
-  cacheLife({ stale: 15, revalidate: 15, expire: 300 })
-
-  return { timestamp: new Date().toISOString() }
-}
-
-export default async function Page() {
-  const data = await getPageData()
-  return <div>{data.timestamp}</div>
-}`}
-                  highlight={[5, 6]}
-                />
-                <Callout type="tip" title="Stale-while-revalidate pattern">
-                  <p>
-                    The first request after the 15-second window still gets the
-                    stale page. The regeneration happens in the background.
-                    The <em>following</em> request gets the fresh version.
-                  </p>
-                </Callout>
-                <Link
-                  href="/time-based"
-                  className="group flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                >
-                  Try the live demo
-                  <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Strategy 2: On-demand */}
-          <Card className="overflow-hidden">
-            <CardHeader className="border-b border-border bg-muted/30">
-              <div className="flex items-center gap-3">
-                <Badge>Strategy 2</Badge>
-                <CardTitle className="text-lg">
-                  On-demand revalidation
-                </CardTitle>
-              </div>
-              <CardDescription>
-                Manually purge cached data when something changes (e.g., CMS
-                update, form submission).
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="flex flex-col gap-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  Tag your cached pages with{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">cacheTag()</code>{" "}
-                  inside a{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">&quot;use cache&quot;</code>{" "}
-                  scope. Then call{" "}
-                  <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">revalidateTag()</code>{" "}
-                  in a Route Handler or Server Action to invalidate them.
-                </p>
-                <CodeBlock
-                  filename="app/api/revalidate/route.ts"
-                  code={`import { revalidateTag } from "next/cache"
-import { NextRequest, NextResponse } from "next/server"
-
-export async function GET(request: NextRequest) {
-  const tag = request.nextUrl.searchParams.get("tag")
-  if (!tag) {
-    return NextResponse.json({ error: "Missing tag" }, { status: 400 })
+          <CodeBlock
+            filename="lib/cms/index.ts"
+            code={`const GET_PAGES_QUERY = \`
+  query GetPages($preview: Boolean) @contentSourceMaps {
+    pageCollection(preview: $preview) {
+      items {
+        sys { id }
+        title
+        slug
+        body { json }
+      }
+    }
   }
+\`;
 
-  // Purge all cache entries tagged with this name
-  revalidateTag(tag, "max")
-  return NextResponse.json({ revalidated: true, tag })
+// In the fetcher, encode the response in draft mode:
+if (draft && json.extensions) {
+  return encodeGraphQLResponse({
+    data: json.data,
+    extensions: json.extensions,
+  }).data;
 }`}
-                  highlight={[11]}
-                />
-                <Callout type="info" title="generateStaticParams">
-                  <p>
-                    Pages listed in <code>generateStaticParams</code> are
-                    pre-rendered at build time. Pages <em>not</em> listed are
-                    rendered on first request, then cached. Both can be
-                    revalidated on demand.
-                  </p>
-                </Callout>
-                <div className="flex flex-wrap gap-3">
-                  <Link
-                    href="/on-demand/post-1"
-                    className="group flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    Pre-built page demo
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                  <span className="text-muted-foreground/50">|</span>
-                  <Link
-                    href="/on-demand/post-2"
-                    className="group flex items-center gap-2 text-sm font-medium text-primary hover:underline"
-                  >
-                    Dynamic page demo
-                    <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
-                  </Link>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            highlight={[2, 16, 17, 18, 19]}
+          />
+          <Callout type="tip" title="No extra setup needed">
+            <p>
+              Content Source Maps work automatically on Vercel preview
+              deployments. The Vercel Toolbar detects the encoded metadata
+              and shows edit links without any configuration.
+            </p>
+          </Callout>
         </section>
 
         <Separator className="mb-10" />
 
-        {/* Key concepts */}
+        {/* Live pages from Contentful */}
         <section className="flex flex-col gap-6 pb-12">
           <h2 className="text-2xl font-semibold text-foreground">
-            Key concepts to remember
+            Pages from Contentful
           </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            These pages are fetched from your Contentful space at build time
+            and cached. On a Vercel preview deployment, hover over any title
+            below to see the Content Link edit button.
+          </p>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-5">
-              <h3 className="text-sm font-semibold text-foreground">
-                fetch() cache integration
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                You can set revalidation per-fetch using{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  {"fetch(url, { next: { revalidate: 15 } })"}
-                </code>{" "}
-                for granular control. Tags work similarly with{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  {"{ next: { tags: ['my-tag'] } }"}
-                </code>.
+          {pages.length === 0 ? (
+            <Callout type="warning" title="No pages found">
+              <p>
+                No entries of type <code>Page</code> were found in your
+                Contentful space. Create some entries with a title, slug, and
+                body to see them listed here.
               </p>
+            </Callout>
+          ) : (
+            <div className="grid gap-4">
+              {pages.map((page) => (
+                <Link key={page.id} href={`/${page.slug}`}>
+                  <Card className="transition-colors hover:bg-muted/50">
+                    <CardHeader>
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-lg">
+                          {page.title}
+                        </CardTitle>
+                        <ArrowRight className="size-4 text-muted-foreground" />
+                      </div>
+                      <CardDescription>/{page.slug}</CardDescription>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
             </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-5">
-              <h3 className="text-sm font-semibold text-foreground">
-                revalidateTag vs revalidatePath
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">revalidateTag</code>{" "}
-                invalidates all entries sharing a tag across routes.{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">revalidatePath</code>{" "}
-                invalidates a specific route path.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-5">
-              <h3 className="text-sm font-semibold text-foreground">
-                Dev mode caveat
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                ISR only works in production builds (
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">next build && next start</code>
-                ). In dev mode, pages are always server-rendered on every
-                request.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 rounded-lg border border-border p-5">
-              <h3 className="text-sm font-semibold text-foreground">
-                Dynamic segments
-              </h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Pages using{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">params</code>{" "}
-                (like <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">/on-demand/[slug]</code>)
-                can optionally export{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">generateStaticParams</code>{" "}
-                to pre-generate specific pages at build time.
-              </p>
-            </div>
-          </div>
+          )}
+
+          {draft && (
+            <Badge variant="outline" className="w-fit">
+              Draft mode active -- showing preview content
+            </Badge>
+          )}
         </section>
 
         {/* Footer */}
         <Separator className="mb-6" />
         <footer className="flex flex-col gap-2 pb-12 text-sm text-muted-foreground">
           <p>
-            Built with Next.js 16 App Router. View the source code in each demo
-            page to understand the implementation.
+            Built with Next.js 16, Contentful, and Vercel Content Link.
           </p>
           <p>
             Learn more in the{" "}
             <a
-              href="https://nextjs.org/docs/app/building-your-application/data-fetching/incremental-static-regeneration"
+              href="https://vercel.com/docs/workflow-collaboration/content-link"
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary underline underline-offset-4"
             >
-              Next.js ISR documentation
+              Vercel Content Link documentation
             </a>
             .
           </p>
         </footer>
       </main>
     </div>
-  )
+  );
 }
