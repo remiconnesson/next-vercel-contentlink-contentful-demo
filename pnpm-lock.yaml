@@ -104,6 +104,9 @@ importers:
       '@vercel/analytics':
         specifier: 1.6.1
         version: 1.6.1(next@16.2.0(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(react@19.2.5)
+      '@vercel/stega':
+        specifier: ^1.1.0
+        version: 1.1.0
       autoprefixer:
         specifier: ^10.4.20
         version: 10.5.0(postcss@8.5.10)

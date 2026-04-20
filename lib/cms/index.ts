@@ -1,5 +1,6 @@
 import type { Document } from "@contentful/rich-text-types";
 import { encodeGraphQLResponse } from "@contentful/live-preview";
+import { vercelStegaClean } from "@vercel/stega";
 import type { Page } from "../types";
 
 // ─── GraphQL fetcher ────────────────────────────────────────────────
@@ -135,7 +136,9 @@ function reshapeToPage(item: Record<string, unknown>): Page {
   const sys = item.sys as { id: string };
   return {
     id: sys.id,
-    slug: item.slug as string,
+    // Always strip stega from slug -- it is used for routing, cache
+    // tags, and GraphQL variables where invisible characters break things.
+    slug: vercelStegaClean(item.slug as string),
     title: item.title as string,
     body: (item.body as { json: Document })?.json ?? null,
   };
@@ -155,9 +158,11 @@ export async function getPageBySlug(
   slug: string,
   draft = false,
 ): Promise<Page | undefined> {
+  // Ensure the slug sent to Contentful is free of stega encoding
+  const cleanSlug = vercelStegaClean(slug);
   const res = await fetchContent<{
     pageCollection: { items: Record<string, unknown>[] };
-  }>(GET_PAGE_BY_SLUG_QUERY, { slug }, draft);
+  }>(GET_PAGE_BY_SLUG_QUERY, { slug: cleanSlug }, draft);
 
   const item = res?.pageCollection?.items?.[0];
   return item ? reshapeToPage(item) : undefined;
