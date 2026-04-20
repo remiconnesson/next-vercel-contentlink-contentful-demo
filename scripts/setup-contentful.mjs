@@ -134,7 +134,7 @@ function richText(paragraphs) {
 
 const ENTRIES = [
   {
-    id: "clDemo-hello-world",
+    id: "cl-demo-hello-world",
     fields: {
       title: { "en-US": "Hello World" },
       slug: { "en-US": "hello-world" },
@@ -147,7 +147,7 @@ const ENTRIES = [
     },
   },
   {
-    id: "clDemo-about",
+    id: "cl-demo-about",
     fields: {
       title: { "en-US": "About" },
       slug: { "en-US": "about" },

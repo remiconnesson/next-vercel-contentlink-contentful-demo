@@ -132,7 +132,6 @@ async function migrateEntries() {
   }
 
   console.log(`Found ${res.items.length} entries to migrate.`);
-  const newIds = [];
 
   for (const entry of res.items) {
     const oldId = entry.sys.id;
@@ -159,7 +158,6 @@ async function migrateEntries() {
       await publishEntry(newId, createResult.sys.version);
     }
 
-    newIds.push(newId);
   }
 
   return res.items;
@@ -182,25 +180,31 @@ async function cleanupOldEntries(entries) {
 
   for (const entry of entries) {
     const id = entry.sys.id;
-    const version = entry.sys.version || entry.sys.publishedVersion;
 
-    // Unpublish first (if published)
+    // Unpublish first (if published) — requires X-Contentful-Version
     if (entry.sys.publishedVersion) {
       console.log(`  Unpublishing "${id}"...`);
       try {
-        await cma(`/entries/${id}/published`, "DELETE");
+        // Re-fetch to get the latest version for the header
+        const current = await cma(`/entries/${id}`);
+        if (!current.notFound) {
+          await cma(`/entries/${id}/published`, "DELETE", null, {
+            "X-Contentful-Version": String(current.sys.version),
+          });
+        }
       } catch {
         console.log(`  Could not unpublish "${id}", may already be unpublished.`);
       }
     }
 
-    // Delete
+    // Delete — also requires X-Contentful-Version
     console.log(`  Deleting "${id}"...`);
     try {
-      // Re-fetch to get latest version
       const latest = await cma(`/entries/${id}`);
       if (!latest.notFound) {
-        await cma(`/entries/${id}`, "DELETE");
+        await cma(`/entries/${id}`, "DELETE", null, {
+          "X-Contentful-Version": String(latest.sys.version),
+        });
         console.log(`  Deleted "${id}".`);
       }
     } catch {

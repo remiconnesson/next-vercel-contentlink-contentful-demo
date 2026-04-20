@@ -12,8 +12,6 @@ interface ContentfulResponse<T> {
 }
 
 // ─── Environment helpers ────────────────────────────────────────────
-// CONTENTFUL_SPACE_ID may accidentally contain a CMA token (CFPAT-…).
-// Detect that and fall back to the known space ID when it happens.
 
 /**
  * Returns true when running on a Vercel preview deployment or when
@@ -28,22 +26,20 @@ function shouldUsePreviewApi(draft: boolean): boolean {
 }
 
 function getSpaceId(): string {
-  const raw = process.env.CONTENTFUL_SPACE_ID ?? "";
-  if (raw && !raw.startsWith("CFPAT-")) return raw;
-  // Fallback: space id discovered from the CMA /spaces endpoint
-  return "xked43r46smn";
+  const raw = process.env.CONTENTFUL_SPACE_ID;
+  if (!raw) throw new Error("Missing CONTENTFUL_SPACE_ID env var");
+  return raw;
 }
 
 function getToken(usePreview: boolean): string {
   if (usePreview) {
-    return process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "";
+    const token = process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN;
+    if (!token) throw new Error("Missing CONTENTFUL_PREVIEW_ACCESS_TOKEN env var");
+    return token;
   }
-  const raw = process.env.CONTENTFUL_ACCESS_TOKEN ?? "";
-  // If the CDA token is actually a CMA token, use the known CDA key
-  if (raw.startsWith("CFPAT-")) {
-    return "9Vs0QOtvV1Yl0hJtlyUCtwZ7N7FoIxKJhtmwfIaR-Ao";
-  }
-  return raw;
+  const token = process.env.CONTENTFUL_ACCESS_TOKEN;
+  if (!token) throw new Error("Missing CONTENTFUL_ACCESS_TOKEN env var");
+  return token;
 }
 
 async function fetchContent<T = Record<string, unknown>>(

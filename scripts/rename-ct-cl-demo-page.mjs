@@ -186,20 +186,29 @@ async function cleanupOldEntries(entries) {
   for (const entry of entries) {
     const id = entry.sys.id;
 
+    // Unpublish first (if published) — requires X-Contentful-Version
     if (entry.sys.publishedVersion) {
       console.log(`  Unpublishing "${id}"...`);
       try {
-        await cma(`/entries/${id}/published`, "DELETE");
+        const current = await cma(`/entries/${id}`);
+        if (!current.notFound) {
+          await cma(`/entries/${id}/published`, "DELETE", null, {
+            "X-Contentful-Version": String(current.sys.version),
+          });
+        }
       } catch {
         console.log(`  Could not unpublish "${id}".`);
       }
     }
 
+    // Delete — also requires X-Contentful-Version
     console.log(`  Deleting "${id}"...`);
     try {
       const latest = await cma(`/entries/${id}`);
       if (!latest.notFound) {
-        await cma(`/entries/${id}`, "DELETE");
+        await cma(`/entries/${id}`, "DELETE", null, {
+          "X-Contentful-Version": String(latest.sys.version),
+        });
         console.log(`  Deleted "${id}".`);
       }
     } catch {
@@ -230,7 +239,11 @@ async function deleteOldContentType() {
 async function verifyGraphQL() {
   console.log("\nVerifying GraphQL collection name...");
 
-  const CDA_TOKEN = "9Vs0QOtvV1Yl0hJtlyUCtwZ7N7FoIxKJhtmwfIaR-Ao";
+  const CDA_TOKEN = process.env.CONTENTFUL_ACCESS_TOKEN;
+  if (!CDA_TOKEN) {
+    console.warn("CONTENTFUL_ACCESS_TOKEN not set, skipping GraphQL verification.");
+    return;
+  }
   const query = `{ clDemoPageCollection { items { sys { id } title slug } } }`;
 
   const res = await fetch(
