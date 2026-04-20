@@ -8,13 +8,15 @@
  */
 
 const SPACE_ID = "xked43r46smn";
-const ENV_ID = "master";
+const ENV_ID = process.env.CONTENTFUL_ENV || "master";
 const CMA_TOKEN = process.env.CONTENTFUL_MANAGEMENT_TOKEN;
 
 if (!CMA_TOKEN) {
   console.error("Missing CONTENTFUL_MANAGEMENT_TOKEN");
   process.exit(1);
 }
+
+console.log(`Targeting Contentful environment: "${ENV_ID}"`);
 
 const BASE = `https://api.contentful.com/spaces/${SPACE_ID}/environments/${ENV_ID}`;
 
