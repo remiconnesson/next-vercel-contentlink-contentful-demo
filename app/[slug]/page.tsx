@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { GenerationStamp } from "@/components/generation-stamp";
 
 // Pre-render all known slugs at build time
 export async function generateStaticParams() {
@@ -79,7 +80,9 @@ export default async function SlugPage({
           <ContentRenderer content={page.body} />
         </article>
 
-        <Separator className="mb-6" />
+        <GenerationStamp />
+
+        <Separator className="my-6" />
         <footer className="pb-12 text-sm text-muted-foreground">
           <p>
             On a Vercel preview deployment, hover over the title or body text
