@@ -14,6 +14,18 @@ interface ContentfulResponse<T> {
 // CONTENTFUL_SPACE_ID may accidentally contain a CMA token (CFPAT-…).
 // Detect that and fall back to the known space ID when it happens.
 
+/**
+ * Returns true when running on a Vercel preview deployment or when
+ * draft mode is explicitly requested. On preview deployments we always
+ * want stega-encoded Content Source Maps so the Vercel Toolbar shows
+ * Content Link edit buttons without requiring the user to enable draft
+ * mode first.
+ */
+function shouldUsePreviewApi(draft: boolean): boolean {
+  if (draft) return true;
+  return process.env.VERCEL_ENV === "preview";
+}
+
 function getSpaceId(): string {
   const raw = process.env.CONTENTFUL_SPACE_ID ?? "";
   if (raw && !raw.startsWith("CFPAT-")) return raw;
@@ -21,8 +33,8 @@ function getSpaceId(): string {
   return "xked43r46smn";
 }
 
-function getToken(draft: boolean): string {
-  if (draft) {
+function getToken(usePreview: boolean): string {
+  if (usePreview) {
     return process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "";
   }
   const raw = process.env.CONTENTFUL_ACCESS_TOKEN ?? "";
@@ -38,8 +50,9 @@ async function fetchContent<T = Record<string, unknown>>(
   variables: Record<string, unknown> = {},
   draft = false,
 ): Promise<T> {
+  const usePreview = shouldUsePreviewApi(draft);
   const spaceId = getSpaceId();
-  const token = getToken(draft);
+  const token = getToken(usePreview);
 
   if (!spaceId || !token) {
     throw new Error("Missing Contentful environment variables");
@@ -55,7 +68,7 @@ async function fetchContent<T = Record<string, unknown>>(
       },
       body: JSON.stringify({
         query,
-        variables: { ...variables, preview: draft },
+        variables: { ...variables, preview: usePreview },
       }),
     },
   );
@@ -73,10 +86,12 @@ async function fetchContent<T = Record<string, unknown>>(
     );
   }
 
-  // Content Source Maps enable live-preview field-level highlighting.
-  // Only present when @contentSourceMaps is in the query AND the
-  // Preview API is being used.
-  if (draft && json.extensions) {
+  // Content Source Maps enable field-level Content Link in the Vercel
+  // Toolbar. The extensions object is only present when
+  // @contentSourceMaps is in the query AND the Preview API is used.
+  // We encode on both draft mode AND Vercel preview deployments so
+  // the toolbar works without requiring the editor to enable draft mode.
+  if (usePreview && json.extensions) {
     return encodeGraphQLResponse({
       data: json.data,
       extensions: json.extensions,
