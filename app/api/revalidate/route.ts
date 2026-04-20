@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   const tags: string[] = [];
 
   switch (contentType) {
-    case "page":
+    case "clDemoPage":
       // Always revalidate the individual page by its entry ID
       tags.push(`page:id:${entryId}`);
       // Always revalidate the list page too -- it displays titles and

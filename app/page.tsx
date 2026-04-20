@@ -168,7 +168,7 @@ export default async function HomePage() {
             filename="lib/cms/index.ts"
             code={`const GET_PAGES_QUERY = \`
   query GetPages($preview: Boolean) @contentSourceMaps {
-    pageCollection(preview: $preview) {
+    clDemoPageCollection(preview: $preview) {
       items {
         sys { id }
         title
@@ -213,9 +213,9 @@ if (draft && json.extensions) {
           {pages.length === 0 ? (
             <Callout type="warning" title="No pages found">
               <p>
-                No entries of type <code>Page</code> were found in your
-                Contentful space. Create some entries with a title, slug, and
-                body to see them listed here.
+                No entries of type <code>clDemoPage</code> were found in
+                your Contentful space. Create some entries with a title,
+                slug, and body to see them listed here.
               </p>
             </Callout>
           ) : (
@@ -312,17 +312,19 @@ if (draft && json.extensions) {
           </p>
           <CodeBlock
             filename="app/api/revalidate/route.ts"
-            code={`// Always revalidate the individual page
-tags.push(\`page:id:\${entryId}\`);
+            code={`// The webhook handler matches on the namespaced content
+// type ID from the Contentful payload:
+// sys.contentType.sys.id === "clDemoPage"
 
-// Always revalidate the list page too -- it displays
-// titles and slugs that may have changed.
-tags.push("page:list");
-
-for (const tag of tags) {
-  revalidateTag(tag, "max");
+switch (contentType) {
+  case "clDemoPage":
+    // Always revalidate the individual page
+    tags.push(\`page:id:\${entryId}\`);
+    // Always revalidate the list page too
+    tags.push("page:list");
+    break;
 }`}
-            highlight={[2, 6]}
+            highlight={[6]}
           />
 
           <h3 className="text-lg font-semibold text-foreground pt-2">
@@ -370,19 +372,23 @@ for (const tag of tags) {
                 Publish, Unpublish
               </li>
               <li>
-                Under <strong className="text-foreground">Content type</strong>,
-                select only{" "}
-                <strong className="text-foreground">Page</strong>
+                Under <strong className="text-foreground">Filters</strong>,
+                filter by content type ID{" "}
+                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                  clDemoPage
+                </code>{" "}
+                so the webhook only fires for entries matching this content
+                model
               </li>
               <li>
                 Under <strong className="text-foreground">Payload</strong>,
-                use the default (entire entry). The handler only reads{" "}
+                use the default (entire entry). The handler reads{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                   sys.id
                 </code>{" "}
-                and{" "}
+                and matches{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  sys.contentType.sys.id
+                  sys.contentType.sys.id === {'"clDemoPage"'}
                 </code>
               </li>
               <li>Save and test by publishing an entry</li>

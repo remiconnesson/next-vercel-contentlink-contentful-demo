@@ -106,7 +106,7 @@ async function fetchContent<T = Record<string, unknown>>(
 
 const GET_PAGES_QUERY = `
   query GetPages($preview: Boolean) @contentSourceMaps {
-    pageCollection(preview: $preview, order: [title_ASC]) {
+    clDemoPageCollection(preview: $preview, order: [title_ASC]) {
       items {
         sys { id }
         title
@@ -119,7 +119,7 @@ const GET_PAGES_QUERY = `
 
 const GET_PAGE_BY_SLUG_QUERY = `
   query GetPageBySlug($slug: String!, $preview: Boolean) @contentSourceMaps {
-    pageCollection(where: { slug: $slug }, limit: 1, preview: $preview) {
+    clDemoPageCollection(where: { slug: $slug }, limit: 1, preview: $preview) {
       items {
         sys { id }
         title
@@ -148,10 +148,10 @@ function reshapeToPage(item: Record<string, unknown>): Page {
 
 export async function getPages(draft = false): Promise<Page[]> {
   const res = await fetchContent<{
-    pageCollection: { items: Record<string, unknown>[] };
+    clDemoPageCollection: { items: Record<string, unknown>[] };
   }>(GET_PAGES_QUERY, {}, draft);
 
-  return res?.pageCollection?.items?.map(reshapeToPage) ?? [];
+  return res?.clDemoPageCollection?.items?.map(reshapeToPage) ?? [];
 }
 
 export async function getPageBySlug(
@@ -161,9 +161,9 @@ export async function getPageBySlug(
   // Ensure the slug sent to Contentful is free of stega encoding
   const cleanSlug = vercelStegaClean(slug);
   const res = await fetchContent<{
-    pageCollection: { items: Record<string, unknown>[] };
+    clDemoPageCollection: { items: Record<string, unknown>[] };
   }>(GET_PAGE_BY_SLUG_QUERY, { slug: cleanSlug }, draft);
 
-  const item = res?.pageCollection?.items?.[0];
+  const item = res?.clDemoPageCollection?.items?.[0];
   return item ? reshapeToPage(item) : undefined;
 }

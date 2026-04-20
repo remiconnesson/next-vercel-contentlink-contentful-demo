@@ -39,13 +39,14 @@ async function cma(path, method = "GET", body = null, extraHeaders = {}) {
   return text ? JSON.parse(text) : {};
 }
 
-// ── Step 1: Create "page" content type ──────────────────────────────
+// ── Step 1: Create "clDemoPage" content type ────────────────────────
 async function createContentType() {
-  console.log("Creating content type 'page'...");
+  console.log("Creating content type 'clDemoPage'...");
 
   const contentType = {
-    name: "Page",
-    description: "A minimal page with title, slug, and body.",
+    name: "CL Demo Page",
+    description:
+      "A minimal page with title, slug, and body. Namespaced for shared Contentful spaces.",
     displayField: "title",
     fields: [
       {
@@ -89,24 +90,24 @@ async function createContentType() {
     ],
   };
 
-  const result = await cma("/content_types/page", "PUT", contentType, {
+  const result = await cma("/content_types/clDemoPage", "PUT", contentType, {
     "X-Contentful-Version": "0",
   });
 
   if (result.conflict) {
-    console.log("Content type 'page' already exists, fetching it...");
-    const existing = await cma("/content_types/page");
+    console.log("Content type 'clDemoPage' already exists, fetching it...");
+    const existing = await cma("/content_types/clDemoPage");
     return existing;
   }
 
-  console.log("Content type 'page' created.");
+  console.log("Content type 'clDemoPage' created.");
   return result;
 }
 
 async function activateContentType(version) {
-  console.log(`Activating content type 'page' (version ${version})...`);
+  console.log(`Activating content type 'clDemoPage' (version ${version})...`);
   const result = await cma(
-    "/content_types/page/published",
+    "/content_types/clDemoPage/published",
     "PUT",
     null,
     { "X-Contentful-Version": String(version) },
@@ -115,7 +116,7 @@ async function activateContentType(version) {
     console.log("Content type already activated.");
     return;
   }
-  console.log("Content type 'page' activated.");
+  console.log("Content type 'clDemoPage' activated.");
 }
 
 // ── Step 2: Seed entries ────────────────────────────────────────────
@@ -133,7 +134,7 @@ function richText(paragraphs) {
 
 const ENTRIES = [
   {
-    id: "page-hello-world",
+    id: "clDemo-hello-world",
     fields: {
       title: { "en-US": "Hello World" },
       slug: { "en-US": "hello-world" },
@@ -146,7 +147,7 @@ const ENTRIES = [
     },
   },
   {
-    id: "page-about",
+    id: "clDemo-about",
     fields: {
       title: { "en-US": "About" },
       slug: { "en-US": "about" },
@@ -168,7 +169,7 @@ async function seedEntries() {
       "PUT",
       { fields: entry.fields },
       {
-        "X-Contentful-Content-Type": "page",
+        "X-Contentful-Content-Type": "clDemoPage",
         "X-Contentful-Version": "0",
       },
     );
@@ -205,7 +206,9 @@ async function main() {
   const ct = await createContentType();
   await activateContentType(ct.sys.version);
   await seedEntries();
-  console.log("\nDone! Content type 'page' and 2 entries created and published.");
+  console.log(
+    '\nDone! Content type "clDemoPage" and 2 entries created and published.',
+  );
 }
 
 main().catch((err) => {
