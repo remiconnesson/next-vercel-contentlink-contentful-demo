@@ -39,9 +39,9 @@ async function cma(path, method = "GET", body = null, extraHeaders = {}) {
   return text ? JSON.parse(text) : {};
 }
 
-// ── Step 1: Create "clDemoPage" content type ────────────────────────
+// ── Step 1: Create "cl-demo-Page" content type ────────────────────────
 async function createContentType() {
-  console.log("Creating content type 'clDemoPage'...");
+  console.log("Creating content type 'cl-demo-Page'...");
 
   const contentType = {
     name: "CL Demo Page",
@@ -90,24 +90,24 @@ async function createContentType() {
     ],
   };
 
-  const result = await cma("/content_types/clDemoPage", "PUT", contentType, {
+  const result = await cma("/content_types/cl-demo-Page", "PUT", contentType, {
     "X-Contentful-Version": "0",
   });
 
   if (result.conflict) {
-    console.log("Content type 'clDemoPage' already exists, fetching it...");
-    const existing = await cma("/content_types/clDemoPage");
+    console.log("Content type 'cl-demo-Page' already exists, fetching it...");
+    const existing = await cma("/content_types/cl-demo-Page");
     return existing;
   }
 
-  console.log("Content type 'clDemoPage' created.");
+  console.log("Content type 'cl-demo-Page' created.");
   return result;
 }
 
 async function activateContentType(version) {
-  console.log(`Activating content type 'clDemoPage' (version ${version})...`);
+  console.log(`Activating content type 'cl-demo-Page' (version ${version})...`);
   const result = await cma(
-    "/content_types/clDemoPage/published",
+    "/content_types/cl-demo-Page/published",
     "PUT",
     null,
     { "X-Contentful-Version": String(version) },
@@ -116,7 +116,7 @@ async function activateContentType(version) {
     console.log("Content type already activated.");
     return;
   }
-  console.log("Content type 'clDemoPage' activated.");
+  console.log("Content type 'cl-demo-Page' activated.");
 }
 
 // ── Step 2: Seed entries ────────────────────────────────────────────
@@ -169,7 +169,7 @@ async function seedEntries() {
       "PUT",
       { fields: entry.fields },
       {
-        "X-Contentful-Content-Type": "clDemoPage",
+        "X-Contentful-Content-Type": "cl-demo-Page",
         "X-Contentful-Version": "0",
       },
     );
@@ -207,7 +207,7 @@ async function main() {
   await activateContentType(ct.sys.version);
   await seedEntries();
   console.log(
-    '\nDone! Content type "clDemoPage" and 2 entries created and published.',
+    '\nDone! Content type "cl-demo-Page" and 2 entries created and published.',
   );
 }
 

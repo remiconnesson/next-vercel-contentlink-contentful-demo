@@ -213,7 +213,7 @@ if (draft && json.extensions) {
           {pages.length === 0 ? (
             <Callout type="warning" title="No pages found">
               <p>
-                No entries of type <code>clDemoPage</code> were found in
+                No entries of type <code>cl-demo-Page</code> were found in
                 your Contentful space. Create some entries with a title,
                 slug, and body to see them listed here.
               </p>
@@ -314,10 +314,10 @@ if (draft && json.extensions) {
             filename="app/api/revalidate/route.ts"
             code={`// The webhook handler matches on the namespaced content
 // type ID from the Contentful payload:
-// sys.contentType.sys.id === "clDemoPage"
+// sys.contentType.sys.id === "cl-demo-Page"
 
 switch (contentType) {
-  case "clDemoPage":
+  case "cl-demo-Page":
     // Always revalidate the individual page
     tags.push(\`page:id:\${entryId}\`);
     // Always revalidate the list page too
@@ -375,7 +375,7 @@ switch (contentType) {
                 Under <strong className="text-foreground">Filters</strong>,
                 filter by content type ID{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  clDemoPage
+                  cl-demo-Page
                 </code>{" "}
                 so the webhook only fires for entries matching this content
                 model
@@ -388,7 +388,7 @@ switch (contentType) {
                 </code>{" "}
                 and matches{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                  sys.contentType.sys.id === {'"clDemoPage"'}
+                  sys.contentType.sys.id === {'"cl-demo-Page"'}
                 </code>
               </li>
               <li>Save and test by publishing an entry</li>
