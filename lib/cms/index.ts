@@ -1,5 +1,6 @@
 import type { Document } from "@contentful/rich-text-types";
 import { encodeGraphQLResponse } from "@contentful/live-preview";
+import { vercelStegaClean } from "@vercel/stega";
 import type { Page } from "../types";
 
 // ─── GraphQL fetcher ────────────────────────────────────────────────
@@ -14,6 +15,18 @@ interface ContentfulResponse<T> {
 // CONTENTFUL_SPACE_ID may accidentally contain a CMA token (CFPAT-…).
 // Detect that and fall back to the known space ID when it happens.
 
+/**
+ * Returns true when running on a Vercel preview deployment or when
+ * draft mode is explicitly requested. On preview deployments we always
+ * want stega-encoded Content Source Maps so the Vercel Toolbar shows
+ * Content Link edit buttons without requiring the user to enable draft
+ * mode first.
+ */
+function shouldUsePreviewApi(draft: boolean): boolean {
+  if (draft) return true;
+  return process.env.VERCEL_ENV === "preview";
+}
+
 function getSpaceId(): string {
   const raw = process.env.CONTENTFUL_SPACE_ID ?? "";
   if (raw && !raw.startsWith("CFPAT-")) return raw;
@@ -21,8 +34,8 @@ function getSpaceId(): string {
   return "xked43r46smn";
 }
 
-function getToken(draft: boolean): string {
-  if (draft) {
+function getToken(usePreview: boolean): string {
+  if (usePreview) {
     return process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN ?? "";
   }
   const raw = process.env.CONTENTFUL_ACCESS_TOKEN ?? "";
@@ -38,8 +51,9 @@ async function fetchContent<T = Record<string, unknown>>(
   variables: Record<string, unknown> = {},
   draft = false,
 ): Promise<T> {
+  const usePreview = shouldUsePreviewApi(draft);
   const spaceId = getSpaceId();
-  const token = getToken(draft);
+  const token = getToken(usePreview);
 
   if (!spaceId || !token) {
     throw new Error("Missing Contentful environment variables");
@@ -55,7 +69,7 @@ async function fetchContent<T = Record<string, unknown>>(
       },
       body: JSON.stringify({
         query,
-        variables: { ...variables, preview: draft },
+        variables: { ...variables, preview: usePreview },
       }),
     },
   );
@@ -73,10 +87,12 @@ async function fetchContent<T = Record<string, unknown>>(
     );
   }
 
-  // Content Source Maps enable live-preview field-level highlighting.
-  // Only present when @contentSourceMaps is in the query AND the
-  // Preview API is being used.
-  if (draft && json.extensions) {
+  // Content Source Maps enable field-level Content Link in the Vercel
+  // Toolbar. The extensions object is only present when
+  // @contentSourceMaps is in the query AND the Preview API is used.
+  // We encode on both draft mode AND Vercel preview deployments so
+  // the toolbar works without requiring the editor to enable draft mode.
+  if (usePreview && json.extensions) {
     return encodeGraphQLResponse({
       data: json.data,
       extensions: json.extensions,
@@ -120,7 +136,9 @@ function reshapeToPage(item: Record<string, unknown>): Page {
   const sys = item.sys as { id: string };
   return {
     id: sys.id,
-    slug: item.slug as string,
+    // Always strip stega from slug -- it is used for routing, cache
+    // tags, and GraphQL variables where invisible characters break things.
+    slug: vercelStegaClean(item.slug as string),
     title: item.title as string,
     body: (item.body as { json: Document })?.json ?? null,
   };
@@ -140,9 +158,11 @@ export async function getPageBySlug(
   slug: string,
   draft = false,
 ): Promise<Page | undefined> {
+  // Ensure the slug sent to Contentful is free of stega encoding
+  const cleanSlug = vercelStegaClean(slug);
   const res = await fetchContent<{
     pageCollection: { items: Record<string, unknown>[] };
-  }>(GET_PAGE_BY_SLUG_QUERY, { slug }, draft);
+  }>(GET_PAGE_BY_SLUG_QUERY, { slug: cleanSlug }, draft);
 
   const item = res?.pageCollection?.items?.[0];
   return item ? reshapeToPage(item) : undefined;
