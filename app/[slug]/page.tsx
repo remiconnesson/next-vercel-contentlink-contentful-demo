@@ -19,9 +19,16 @@ export async function generateStaticParams() {
 async function getCachedPage(slug: string) {
   "use cache";
   cacheLife("max");
-  cacheTag(`page:${slug}`, "page:list");
+  // Tag by slug so generateMetadata can also hit the same cache entry.
+  // After fetching, we add a tag for the entry ID so the Contentful
+  // webhook (which only knows the entry ID) can revalidate this page
+  // without touching the list page.
+  cacheTag(`page:slug:${slug}`);
 
   const page = await getPageBySlug(slug);
+  if (page) {
+    cacheTag(`page:id:${page.id}`);
+  }
   return page ?? null;
 }
 
