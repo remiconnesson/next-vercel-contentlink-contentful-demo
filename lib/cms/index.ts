@@ -34,11 +34,19 @@ function getSpaceId(): string {
 function getToken(usePreview: boolean): string {
   if (usePreview) {
     const token = process.env.CONTENTFUL_PREVIEW_ACCESS_TOKEN;
-    if (!token) throw new Error("Missing CONTENTFUL_PREVIEW_ACCESS_TOKEN env var");
+    if (!token)
+      throw new Error("Missing CONTENTFUL_PREVIEW_ACCESS_TOKEN env var");
     return token;
   }
   const token = process.env.CONTENTFUL_ACCESS_TOKEN;
   if (!token) throw new Error("Missing CONTENTFUL_ACCESS_TOKEN env var");
+  if (token.startsWith("CFPAT-")) {
+    throw new Error(
+      "CONTENTFUL_ACCESS_TOKEN is set to a CMA (management) token. " +
+        "It must be a CDA (Content Delivery API) token instead. " +
+        "Find it in Contentful under Settings > API keys.",
+    );
+  }
   return token;
 }
 
