@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { draftMode } from "next/headers";
 import { Analytics } from "@vercel/analytics/next";
+import { VercelToolbar } from "@vercel/toolbar/next";
 import { LivePreviewProvider } from "@/lib/cms/contentful-live-preview-provider";
 import "./globals.css";
 
@@ -44,6 +45,7 @@ export default async function RootLayout({
         <LivePreviewProvider enabled={draftEnabled}>
           {children}
         </LivePreviewProvider>
+        <VercelToolbar />
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
