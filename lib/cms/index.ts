@@ -14,15 +14,22 @@ interface ContentfulResponse<T> {
 // ─── Environment helpers ────────────────────────────────────────────
 
 /**
- * Returns true when running on a Vercel preview deployment or when
- * draft mode is explicitly requested. On preview deployments we always
- * want stega-encoded Content Source Maps so the Vercel Toolbar shows
- * Content Link edit buttons without requiring the user to enable draft
- * mode first.
+ * Returns true when Content Source Maps should be included in the
+ * response. This uses the Contentful Preview API so the Vercel
+ * Toolbar can show Content Link edit buttons.
+ *
+ * Enabled in three cases:
+ * 1. Draft mode is explicitly requested.
+ * 2. Running on a Vercel preview deployment.
+ * 3. Running on a Vercel production deployment (so Content Link
+ *    works in prod for team members with the Vercel Toolbar).
  */
 function shouldUsePreviewApi(draft: boolean): boolean {
   if (draft) return true;
-  return process.env.VERCEL_ENV === "preview";
+  return (
+    process.env.VERCEL_ENV === "preview" ||
+    process.env.VERCEL_ENV === "production"
+  );
 }
 
 function getSpaceId(): string {
