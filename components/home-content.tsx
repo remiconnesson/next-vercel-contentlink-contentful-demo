@@ -155,6 +155,30 @@ export function HomeContent({ pages, stamp, draft }: HomeContentProps) {
 
           <Separator className="mb-10" />
 
+          {/* Live updates proof (ISR) */}
+          <section className="flex flex-col gap-6 pb-12">
+            <h2 className="text-2xl font-semibold text-foreground">
+              See updates go live
+            </h2>
+            <p className="text-muted-foreground leading-relaxed">
+              When someone publishes in Contentful, only the page that changed
+              refreshes -- everything else keeps serving instantly. The stamp
+              below is proof: edit a page and only its stamp updates.
+            </p>
+
+            <GenerationStamp data={stamp} />
+
+            <Callout type="tip" title="Try it yourself">
+              <p>
+                Open two pages in separate tabs, edit one entry in Contentful,
+                and publish. Refresh both -- only the page you changed shows a
+                new stamp. Fast, targeted, no full-site rebuild.
+              </p>
+            </Callout>
+          </section>
+
+          <Separator className="mb-10" />
+
           {/* Live pages */}
           <section className="flex flex-col gap-6 pb-12">
             <h2 className="text-2xl font-semibold text-foreground">
