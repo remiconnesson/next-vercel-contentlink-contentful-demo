@@ -18,18 +18,12 @@ interface ContentfulResponse<T> {
  * response. This uses the Contentful Preview API so the Vercel
  * Toolbar can show Content Link edit buttons.
  *
- * Enabled in three cases:
- * 1. Draft mode is explicitly requested.
- * 2. Running on a Vercel preview deployment.
- * 3. Running on a Vercel production deployment (so Content Link
- *    works in prod for team members with the Vercel Toolbar).
+ * Enabled only when Draft Mode is active. Vercel protects the
+ * Toolbar Draft Mode toggle for project/team members, while regular
+ * visitors keep seeing published Delivery API content.
  */
 function shouldUsePreviewApi(draft: boolean): boolean {
-  if (draft) return true;
-  return (
-    process.env.VERCEL_ENV === "preview" ||
-    process.env.VERCEL_ENV === "production"
-  );
+  return draft;
 }
 
 function getSpaceId(): string {
@@ -107,8 +101,8 @@ async function fetchContent<T = Record<string, unknown>>(
   // Content Source Maps enable field-level Content Link in the Vercel
   // Toolbar. The extensions object is only present when
   // @contentSourceMaps is in the query AND the Preview API is used.
-  // We encode on both draft mode AND Vercel preview deployments so
-  // the toolbar works without requiring the editor to enable draft mode.
+  // Encode only in Draft Mode so regular production visitors receive
+  // published content without stega metadata.
   if (usePreview && json.extensions) {
     return encodeGraphQLResponse({
       data: json.data,
